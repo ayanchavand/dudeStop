@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mindful Moment</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0e0e11;
+  --surface: #16161a;
+  --border: rgba(255,255,255,0.08);
+  --text-primary: #f0eeea;
+  --text-muted: #888680;
+  --accent: #c8a97e;
+  --accent-dim: rgba(200,169,126,0.12);
+  --accent-border: rgba(200,169,126,0.3);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  width: 320px;
+  padding: 0;
+  margin: 0;
+}
+
+.popup-container {
+  padding: 1rem;
+}
+
+.popup-header {
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 1rem;
+}
+
+.popup-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.popup-item-label {
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+.popup-item-value {
+  font-weight: 500;
+  color: var(--accent);
+  font-size: 0.95rem;
+}
+
+.popup-button {
+  width: 100%;
+  padding: 0.85rem;
+  background: var(--accent-dim);
+  border: 1px solid var(--accent-border);
+  border-radius: 8px;
+  color: var(--accent);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+  text-align: center;
+  display: block;
+}
+
+.popup-button:hover {
+  background: rgba(200,169,126,0.2);
+  border-color: rgba(200,169,126,0.5);
+}
+
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 0.75rem 0;
+}
+</style>
+</head>
+<body>
+
+<div class="popup-container">
+  <div class="popup-header">Mindful Moment</div>
+  
+  <div class="popup-item">
+    <span class="popup-item-label">Timer Duration</span>
+    <span class="popup-item-value" id="timerValue">10s</span>
+  </div>
+
+  <div class="popup-item">
+    <span class="popup-item-label">Monitored Sites</span>
+    <span class="popup-item-value" id="siteCount">1</span>
+  </div>
+
+  <div class="divider"></div>
+
+  <button class="popup-button" id="openSettings">Open Full Settings</button>
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>

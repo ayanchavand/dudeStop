@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Too much YouTube</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0e0e11;
+    --surface: #16161a;
+    --text-primary: #f0eeea;
+    --text-muted: #888680;
+    --text-dim: #555250;
+    --danger: #e06c75;
+    --danger-dim: rgba(224,108,117,0.08);
+    --danger-border: rgba(224,108,117,0.25);
+    --accent: #c8a97e;
+    --accent-dim: rgba(200,169,126,0.1);
+    --accent-border: rgba(200,169,126,0.25);
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    overflow-x: hidden;
+  }
+
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 2rem;
+  }
+
+  .stars {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 0;
+  }
+
+  .star {
+    position: absolute;
+    background: #fff;
+    border-radius: 50%;
+    opacity: 0;
+    animation: twinkle var(--dur, 4s) var(--delay, 0s) infinite;
+  }
+
+  @keyframes twinkle {
+    0%, 100% { opacity: 0; }
+    50% { opacity: var(--max-opacity, 0.4); }
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 560px;
+    width: 100%;
+    text-align: center;
+  }
+
+  .icon-wrap {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 2rem;
+    border-radius: 50%;
+    background: var(--danger-dim);
+    border: 1px solid var(--danger-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .icon-wrap svg {
+    width: 24px;
+    height: 24px;
+    stroke: var(--danger);
+    fill: none;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--danger);
+    opacity: 0.7;
+    margin-bottom: 1rem;
+  }
+
+  .headline {
+    font-size: clamp(1.5rem, 4vw, 2.2rem);
+    font-weight: 300;
+    line-height: 1.3;
+    color: var(--text-primary);
+    margin-bottom: 1.25rem;
+    letter-spacing: -0.01em;
+  }
+
+  .subtext {
+    font-size: 0.95rem;
+    line-height: 1.75;
+    color: var(--text-muted);
+    margin-bottom: 2.5rem;
+    max-width: 440px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .stat-row {
+    display: flex;
+    justify-content: center;
+    gap: 1px;
+    margin-bottom: 2.5rem;
+  }
+
+  .stat {
+    background: var(--surface);
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem 1.5rem;
+    flex: 1;
+    max-width: 140px;
+  }
+
+  .stat:first-child { border-radius: 10px 0 0 10px; }
+  .stat:last-child  { border-radius: 0 10px 10px 0; }
+
+  .stat-num {
+    font-size: 1.8rem;
+    font-weight: 300;
+    color: var(--danger);
+    line-height: 1;
+    margin-bottom: 0.3rem;
+  }
+
+  .stat-label {
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .rules {
+    background: var(--surface);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 2rem;
+    text-align: left;
+  }
+
+  .rules-title {
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 0.85rem;
+  }
+
+  .rule {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 0.6rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  .rule:last-child { margin-bottom: 0; }
+
+  .rule-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--accent);
+    opacity: 0.5;
+    flex-shrink: 0;
+    margin-top: 7px;
+  }
+
+  .btn-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    align-items: center;
+  }
+
+  .btn-back {
+    width: 100%;
+    padding: 0.85rem 1.5rem;
+    background: var(--accent-dim);
+    border: 1px solid var(--accent-border);
+    border-radius: 10px;
+    color: var(--accent);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+    letter-spacing: 0.01em;
+  }
+
+  .btn-back:hover {
+    background: rgba(200,169,126,0.18);
+    border-color: rgba(200,169,126,0.45);
+  }
+
+  .fade-in { animation: fadeUp 0.5s ease both; }
+  .delay-1 { animation-delay: 0.08s; }
+  .delay-2 { animation-delay: 0.16s; }
+  .delay-3 { animation-delay: 0.24s; }
+  .delay-4 { animation-delay: 0.32s; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+
+<div class="stars" id="stars"></div>
+
+<div class="container">
+
+  <div class="icon-wrap fade-in">
+    <svg viewBox="0 0 24 24">
+      <path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+    </svg>
+  </div>
+
+  <p class="eyebrow fade-in delay-1">hold on</p>
+
+  <h1 class="headline fade-in delay-1">
+    You already have YouTube open.
+  </h1>
+
+  <p class="subtext fade-in delay-2">
+    Opening another tab won't make the first one more meaningful.
+    Close what you have, finish what you started, or do something else entirely.
+  </p>
+
+  <div class="stat-row fade-in delay-2">
+    <div class="stat">
+      <div class="stat-num" id="open-count">1</div>
+      <div class="stat-label">tab open</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">0</div>
+      <div class="stat-label">tabs needed</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">∞</div>
+      <div class="stat-label">other options</div>
+    </div>
+  </div>
+
+  <div class="rules fade-in delay-3">
+    <p class="rules-title">your rules (you set these)</p>
+    <div class="rule">
+      <span class="rule-dot"></span>
+      <span>One YouTube tab at a time. The second one is always avoidance.</span>
+    </div>
+    <div class="rule">
+      <span class="rule-dot"></span>
+      <span>If you're bored of the first tab, close it — don't open a new one.</span>
+    </div>
+    <div class="rule">
+      <span class="rule-dot"></span>
+      <span>Autoplay is not a reason. You chose to be here.</span>
+    </div>
+  </div>
+
+  <div class="btn-group fade-in delay-4">
+    <button class="btn-back" onclick="history.back()">← Go back to what I was doing</button>
+  </div>
+
+</div>
+
+<script>
+  const params = new URLSearchParams(window.location.search);
+  const count = parseInt(params.get('count')) || 1;
+  const site = params.get('site') || 'YouTube';
+  document.getElementById('open-count').textContent = count;
+  document.title = `Too much ${site}`;
+  document.querySelector('.headline').textContent = `You already have ${site} open.`;
+  document.querySelector('.rule span').textContent = `One ${site} tab at a time. The second one is always avoidance.`;
+
+  const starsEl = document.getElementById('stars');
+  for (let i = 0; i < 60; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    const size = Math.random() * 1.4 + 0.4;
+    s.style.cssText = `
+      width:${size}px; height:${size}px;
+      top:${Math.random()*100}%;
+      left:${Math.random()*100}%;
+      --dur:${3+Math.random()*5}s;
+      --delay:${Math.random()*5}s;
+      --max-opacity:${0.1+Math.random()*0.3};
+    `;
+    starsEl.appendChild(s);
+  }
+</script>
+</body>
+</html>

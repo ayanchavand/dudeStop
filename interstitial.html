@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pause for a moment</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0e0e11;
+    --surface: #16161a;
+    --border: rgba(255,255,255,0.08);
+    --text-primary: #f0eeea;
+    --text-muted: #888680;
+    --text-dim: #555250;
+    --accent: #c8a97e;
+    --accent-dim: rgba(200,169,126,0.12);
+    --accent-border: rgba(200,169,126,0.3);
+    --danger: #e06c75;
+    --danger-dim: rgba(224,108,117,0.1);
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    overflow-x: hidden;
+  }
+
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 2rem;
+  }
+
+  .stars {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 0;
+  }
+
+  .star {
+    position: absolute;
+    background: #fff;
+    border-radius: 50%;
+    opacity: 0;
+    animation: twinkle var(--dur, 4s) var(--delay, 0s) infinite;
+  }
+
+  @keyframes twinkle {
+    0%, 100% { opacity: 0; }
+    50% { opacity: var(--max-opacity, 0.4); }
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 640px;
+    width: 100%;
+    text-align: center;
+  }
+
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 2.5rem;
+  }
+
+  .headline {
+    font-size: clamp(1.6rem, 4vw, 2.4rem);
+    font-weight: 300;
+    line-height: 1.35;
+    color: var(--text-primary);
+    margin-bottom: 1.5rem;
+    letter-spacing: -0.01em;
+  }
+
+  .headline em {
+    font-style: normal;
+    color: var(--accent);
+    font-weight: 400;
+  }
+
+  .subtext {
+    font-size: 1rem;
+    line-height: 1.7;
+    color: var(--text-muted);
+    margin-bottom: 3rem;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .divider {
+    width: 40px;
+    height: 1px;
+    background: var(--border);
+    margin: 0 auto 2.5rem;
+  }
+
+  .inspire-card {
+    background: var(--surface);
+    border: 1px solid var(--accent-border);
+    border-radius: 16px;
+    padding: 1.5rem 1.75rem;
+    margin-bottom: 2rem;
+    text-align: left;
+    transition: border-color 0.3s;
+    min-height: 110px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .inspire-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.6rem;
+    opacity: 0.7;
+  }
+
+  .inspire-title {
+    font-size: 1.05rem;
+    font-weight: 400;
+    color: var(--text-primary);
+    line-height: 1.4;
+    margin-bottom: 0.35rem;
+  }
+
+  .inspire-desc {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  .btn-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: center;
+  }
+
+  .btn-inspire {
+    width: 100%;
+    padding: 0.85rem 1.5rem;
+    background: var(--accent-dim);
+    border: 1px solid var(--accent-border);
+    border-radius: 10px;
+    color: var(--accent);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+    letter-spacing: 0.01em;
+  }
+
+  .btn-inspire:hover {
+    background: rgba(200,169,126,0.2);
+    border-color: rgba(200,169,126,0.5);
+  }
+
+  .btn-youtube {
+    background: none;
+    border: 1px solid transparent;
+    color: var(--accent);
+    font-size: 0.8rem;
+    cursor: pointer;
+    padding: 0.5rem 1.2rem;
+    transition: color 0.2s, border-color 0.2s, background 0.2s;
+    letter-spacing: 0.02em;
+    border-radius: 8px;
+  }
+
+  .btn-youtube:hover {
+    color: var(--accent);
+    border-color: rgba(200,169,126,0.3);
+  }
+
+  .btn-youtube.countdown-active {
+    cursor: not-allowed;
+    color: var(--text-muted);
+    border-color: rgba(255,255,255,0.08);
+  }
+
+  .btn-youtube.ready {
+    cursor: pointer;
+    color: var(--danger);
+    border-color: rgba(224,108,117,0.25);
+  }
+
+  .btn-youtube.ready:hover {
+    background: var(--danger-dim);
+    border-color: rgba(224,108,117,0.5);
+  }
+
+  .countdown-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .countdown-ring {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+  }
+
+  .countdown-ring svg {
+    transform: rotate(-90deg);
+    display: block;
+  }
+
+  .countdown-ring .track {
+    fill: none;
+    stroke: rgba(255,255,255,0.08);
+    stroke-width: 2;
+  }
+
+  .countdown-ring .fill {
+    fill: none;
+    stroke: var(--text-dim);
+    stroke-width: 2;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 1s linear, stroke 0.3s;
+  }
+
+  .btn-youtube.ready .countdown-ring .fill {
+    stroke: var(--danger);
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 1.5px solid var(--accent-border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .fade-in {
+    animation: fadeUp 0.6s ease both;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .delay-1 { animation-delay: 0.1s; }
+  .delay-2 { animation-delay: 0.2s; }
+  .delay-3 { animation-delay: 0.3s; }
+  .delay-4 { animation-delay: 0.4s; }
+  .delay-5 { animation-delay: 0.5s; }
+</style>
+</head>
+<body>
+
+<div class="stars" id="stars"></div>
+
+<div class="container">
+  <p class="eyebrow fade-in">one moment</p>
+
+  <h1 class="headline fade-in delay-1">
+    Don't default to your habits.<br>
+    <em>Is this really how you want<br>to spend your time?</em>
+  </h1>
+
+  <p class="subtext fade-in delay-2">
+    The content you scroll through today will mostly fade by tomorrow.
+    But the things you build, learn, and create — those stay.
+    What world are you capable of making?
+  </p>
+
+  <div class="divider fade-in delay-2"></div>
+
+  <div class="inspire-card fade-in delay-3" id="inspire-card">
+    <div class="inspire-label">instead, explore</div>
+    <div class="inspire-title" id="inspire-title"><span class="spinner"></span> Finding something interesting...</div>
+    <div class="inspire-desc" id="inspire-desc"></div>
+  </div>
+
+  <div class="btn-group fade-in delay-4">
+    <button class="btn-inspire" id="btn-go">Take me there →</button>
+    <button class="btn-inspire" style="opacity: 0.6; font-size: 0.82rem;" id="btn-shuffle">↻ Show me something else</button>
+    <button class="btn-inspire" style="border-color: rgba(224,108,117,0.3); color: rgba(224,108,117,0.8); background: rgba(224,108,117,0.05);" id="btn-free-visit">☀️ Get 30 min free visit</button>
+    <button class="btn-youtube" id="btn-youtube">
+      <span class="countdown-wrap">
+        <span class="countdown-ring">
+          <svg viewBox="0 0 14 14" width="14" height="14">
+            <circle class="track" cx="7" cy="7" r="5"/>
+            <circle class="fill" id="ring-fill" cx="7" cy="7" r="5"
+              stroke-dasharray="31.4"
+              stroke-dashoffset="0"/>
+          </svg>
+        </span>
+        <span id="yt-btn-label">Click to start thinking time<span id="countdown-num"></span></span>
+      </span>
+    </button>
+  </div>
+</div>
+
+<script src="interstitial.js"></script>
+</body>
+</html>
