@@ -3,7 +3,7 @@ const BYPASS_DURATION_MS = 5 * 60 * 1000;
 
 let bypassUntil = 0;
 let monitoredSites = ['youtube.com']; // Default, will be loaded from storage
-let freeVisits = {}; // Track free visits: {site: {expiresAt}}
+let globalFreeVisit = { active: false, expiresAt: 0 }; // Global free visit tracking
 let activeMonitoredSite = null; // Track which monitored site is currently active
 
 // Track tabs that are actively on monitored sites: Map<site, Set<tabId>>
@@ -16,9 +16,9 @@ chrome.storage.sync.get(['monitoredSites'], function(result) {
   monitoredSites = result.monitoredSites || ['youtube.com'];
 });
 
-// Load free visits from storage
-chrome.storage.sync.get(['freeVisits'], function(result) {
-  freeVisits = result.freeVisits || {};
+// Load global free visit from storage
+chrome.storage.sync.get(['globalFreeVisit'], function(result) {
+  globalFreeVisit = result.globalFreeVisit || { active: false, expiresAt: 0 };
 });
 
 // Load active monitored site from storage
@@ -26,14 +26,14 @@ chrome.storage.sync.get(['activeMonitoredSite'], function(result) {
   activeMonitoredSite = result.activeMonitoredSite || null;
 });
 
-// Listen for changes to monitored sites, free visits, and active site
+// Listen for changes to monitored sites, global free visit, and active site
 chrome.storage.onChanged.addListener((changes, areaName) => {
   if (areaName === 'sync') {
     if (changes.monitoredSites) {
       monitoredSites = changes.monitoredSites.newValue || ['youtube.com'];
     }
-    if (changes.freeVisits) {
-      freeVisits = changes.freeVisits.newValue || {};
+    if (changes.globalFreeVisit) {
+      globalFreeVisit = changes.globalFreeVisit.newValue || { active: false, expiresAt: 0 };
     }
     if (changes.activeMonitoredSite) {
       activeMonitoredSite = changes.activeMonitoredSite.newValue || null;
@@ -60,16 +60,17 @@ function isExtensionPage(urlStr) {
   return urlStr && urlStr.startsWith(chrome.runtime.getURL(""));
 }
 
-// Check if a site has an active free visit
-function hasFreeVisit(site) {
-  if (freeVisits[site]) {
+// Check if global free visit is active
+function hasGlobalFreeVisit() {
+  if (globalFreeVisit.active) {
     const now = Date.now();
-    if (freeVisits[site].expiresAt > now) {
+    if (globalFreeVisit.expiresAt > now) {
       return true;
     } else {
-      // Free visit has expired, remove it
-      delete freeVisits[site];
-      chrome.storage.sync.set({ freeVisits });
+      // Free visit has expired, mark as inactive
+      globalFreeVisit.active = false;
+      globalFreeVisit.expiresAt = 0;
+      chrome.storage.sync.set({ globalFreeVisit });
     }
   }
   return false;
@@ -178,9 +179,9 @@ function handleMonitoredNavigation(tabId, urlStr) {
     return;
   }
 
-  // Check for free visit on this site — if active, allow access without showing interstitial
-  if (hasFreeVisit(site)) {
-    // Free visit is active on this site, allow immediate access
+  // Check for global free visit — if active, allow access without showing interstitial
+  if (hasGlobalFreeVisit()) {
+    // Global free visit is active, allow immediate access
     processingTabs.delete(tabId);
     return;
   }

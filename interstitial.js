@@ -194,26 +194,23 @@ btnYT.addEventListener('click', () => {
 
 const btnFreeVisit = document.getElementById('btn-free-visit');
 btnFreeVisit.addEventListener('click', () => {
-  // Grant 30 minute free visit for this site
+  // Grant 30 minute global free visit
   const durationMinutes = 30;
   const expiresAt = Date.now() + (durationMinutes * 60 * 1000);
+  const globalFreeVisit = { active: true, expiresAt };
   
-  chrome.storage.sync.get(['freeVisits'], function(result) {
-    const freeVisits = result.freeVisits || {};
-    freeVisits[site] = { expiresAt };
-    chrome.storage.sync.set({ freeVisits }, function() {
-      // Show success message
-      const originalText = btnFreeVisit.textContent;
-      btnFreeVisit.textContent = '✓ Free visit granted!';
-      btnFreeVisit.disabled = true;
-      btnFreeVisit.style.opacity = '0.5';
-      
-      // Redirect after a short delay
-      setTimeout(() => {
-        const dest = params.get('dest') || `https://www.${site.toLowerCase()}.com`;
-        window.location.href = dest;
-      }, 1000);
-    });
+  chrome.storage.sync.set({ globalFreeVisit }, function() {
+    // Show success message
+    const originalText = btnFreeVisit.textContent;
+    btnFreeVisit.textContent = '✓ Free visit granted!';
+    btnFreeVisit.disabled = true;
+    btnFreeVisit.style.opacity = '0.5';
+    
+    // Redirect after a short delay
+    setTimeout(() => {
+      const dest = params.get('dest') || `https://www.${site.toLowerCase()}.com`;
+      window.location.href = dest;
+    }, 1000);
   });
 });
 
