@@ -4,6 +4,7 @@ const BYPASS_DURATION_MS = 5 * 60 * 1000;
 let bypassUntil = 0;
 let monitoredSites = ['youtube.com']; // Default, will be loaded from storage
 let freeVisits = {}; // Track free visits: {site: {expiresAt}}
+let activeMonitoredSite = null; // Track which monitored site is currently active
 
 // Track tabs that are actively on monitored sites: Map<site, Set<tabId>>
 const monitoredTabs = new Map();
@@ -20,7 +21,12 @@ chrome.storage.sync.get(['freeVisits'], function(result) {
   freeVisits = result.freeVisits || {};
 });
 
-// Listen for changes to monitored sites and free visits
+// Load active monitored site from storage
+chrome.storage.sync.get(['activeMonitoredSite'], function(result) {
+  activeMonitoredSite = result.activeMonitoredSite || null;
+});
+
+// Listen for changes to monitored sites, free visits, and active site
 chrome.storage.onChanged.addListener((changes, areaName) => {
   if (areaName === 'sync') {
     if (changes.monitoredSites) {
@@ -28,6 +34,9 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
     }
     if (changes.freeVisits) {
       freeVisits = changes.freeVisits.newValue || {};
+    }
+    if (changes.activeMonitoredSite) {
+      activeMonitoredSite = changes.activeMonitoredSite.newValue || null;
     }
   }
 });
@@ -91,9 +100,23 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 });
 
 chrome.tabs.onRemoved.addListener((tabId) => {
-  for (const tabs of monitoredTabs.values()) {
-    tabs.delete(tabId);
+  let removedSite = null;
+  for (const [site, tabs] of monitoredTabs.entries()) {
+    if (tabs.has(tabId)) {
+      removedSite = site;
+      tabs.delete(tabId);
+    }
   }
+  
+  // If we removed a tab from the active site and no other tabs of that site exist, reset activeMonitoredSite
+  if (removedSite && activeMonitoredSite === removedSite) {
+    const activeTabs = monitoredTabs.get(removedSite);
+    if (!activeTabs || activeTabs.size === 0) {
+      activeMonitoredSite = null;
+      chrome.storage.sync.set({ activeMonitoredSite });
+    }
+  }
+  
   processingTabs.delete(tabId);
 });
 
@@ -136,18 +159,24 @@ function handleMonitoredNavigation(tabId, urlStr) {
   const allowedPaths = ["/api/", "/youtubei/", "/generate_204"];
   if (allowedPaths.some((p) => path.startsWith(p))) return;
 
+  processingTabs.add(tabId);
+
+  // ONE-SITE-ACTIVE RULE: Check if a different monitored site is currently active
+  if (activeMonitoredSite !== null && activeMonitoredSite !== site) {
+    // Different monitored site is active — show generic blocked page
+    const blockedUrl = chrome.runtime.getURL("blocked.html");
+    chrome.tabs.update(tabId, { url: blockedUrl });
+    processingTabs.delete(tabId);
+    return;
+  }
+
   // Check how many other tabs are already on this site (excluding this tab)
   const siteTabs = monitoredTabs.get(site) || new Set();
   const otherTabs = [...siteTabs].filter(id => id !== tabId);
 
-  processingTabs.add(tabId);
-
   if (otherTabs.length >= 1) {
-    // Already have a tab open on this site — block entirely
-    const blockedUrl =
-      chrome.runtime.getURL("blocked.html") +
-      "?site=" + encodeURIComponent(site) +
-      "&count=" + encodeURIComponent(siteTabs.size + 1);
+    // Already have a tab open on this site — show generic blocked page
+    const blockedUrl = chrome.runtime.getURL("blocked.html");
     chrome.tabs.update(tabId, { url: blockedUrl });
   } else {
     // First tab on this site — show the mindful interstitial
@@ -156,6 +185,10 @@ function handleMonitoredNavigation(tabId, urlStr) {
       "?dest=" + encodeURIComponent(urlStr) +
       "&site=" + encodeURIComponent(site);
     chrome.tabs.update(tabId, { url: interstitialUrl });
+    
+    // Set this site as the active monitored site
+    activeMonitoredSite = site;
+    chrome.storage.sync.set({ activeMonitoredSite });
   }
 
   processingTabs.delete(tabId);
