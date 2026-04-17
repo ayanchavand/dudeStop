@@ -44,8 +44,6 @@ function loadSites() {
       li.appendChild(removeBtn);
       siteList.appendChild(li);
     });
-    // Also update the free visit dropdown
-    loadFreeVisitSiteDropdown();
   });
 }
 
@@ -77,30 +75,10 @@ function removeSite(site) {
   });
 }
 
-// ── Free visit management ──────────────────────────────────────────
+// ── Global Free Visit management ───────────────────────────────────
 
-function loadFreeVisitSiteDropdown() {
-  chrome.storage.sync.get(['monitoredSites'], function(result) {
-    const sites = result.monitoredSites || ['youtube.com'];
-    const dropdown = document.getElementById('freeVisitSite');
-    dropdown.innerHTML = '<option value="">Select a monitored website...</option>';
-    sites.forEach(site => {
-      const option = document.createElement('option');
-      option.value = site;
-      option.textContent = site;
-      dropdown.appendChild(option);
-    });
-  });
-}
-
-function grantFreeVisit() {
-  const site = document.getElementById('freeVisitSite').value;
+function grantGlobalFreeVisit() {
   const durationMinutes = parseInt(document.getElementById('freeVisitDuration').value, 10);
-  
-  if (!site) {
-    alert('Please select a website');
-    return;
-  }
   
   if (isNaN(durationMinutes) || durationMinutes < 1 || durationMinutes > 180) {
     alert('Please enter a valid duration between 1 and 180 minutes');
@@ -108,16 +86,12 @@ function grantFreeVisit() {
   }
   
   const expiresAt = Date.now() + (durationMinutes * 60 * 1000);
+  const globalFreeVisit = { active: true, expiresAt };
   
-  chrome.storage.sync.get(['freeVisits'], function(result) {
-    const freeVisits = result.freeVisits || {};
-    freeVisits[site] = { expiresAt };
-    chrome.storage.sync.set({ freeVisits }, function() {
-      showFreeVisitSuccessMessage();
-      loadFreeVisits();
-      document.getElementById('freeVisitSite').value = '';
-      document.getElementById('freeVisitDuration').value = '30';
-    });
+  chrome.storage.sync.set({ globalFreeVisit }, function() {
+    showFreeVisitSuccessMessage();
+    loadGlobalFreeVisitStatus();
+    document.getElementById('freeVisitDuration').value = '30';
   });
 }
 
@@ -127,70 +101,22 @@ function showFreeVisitSuccessMessage() {
   setTimeout(() => msg.classList.remove('show'), 2000);
 }
 
-function loadFreeVisits() {
-  chrome.storage.sync.get(['freeVisits'], function(result) {
-    const freeVisits = result.freeVisits || {};
-    const freeVisitList = document.getElementById('freeVisitList');
+function loadGlobalFreeVisitStatus() {
+  chrome.storage.sync.get(['globalFreeVisit'], function(result) {
+    const globalFreeVisit = result.globalFreeVisit || { active: false, expiresAt: 0 };
+    const statusEl = document.getElementById('freeVisitStatus');
     
-    // Clean up expired free visits
     const now = Date.now();
-    const expiredSites = [];
-    for (const site in freeVisits) {
-      if (freeVisits[site].expiresAt <= now) {
-        expiredSites.push(site);
-      }
+    if (globalFreeVisit.active && globalFreeVisit.expiresAt > now) {
+      const remainingMs = globalFreeVisit.expiresAt - now;
+      const minutes = Math.floor(remainingMs / 60000);
+      const seconds = Math.floor((remainingMs % 60000) / 1000);
+      statusEl.textContent = `Active — ${minutes}m ${seconds}s remaining`;
+      statusEl.style.color = 'var(--accent)';
+    } else {
+      statusEl.textContent = 'No active free visit';
+      statusEl.style.color = 'var(--text-dim)';
     }
-    if (expiredSites.length > 0) {
-      expiredSites.forEach(site => delete freeVisits[site]);
-      chrome.storage.sync.set({ freeVisits });
-    }
-    
-    freeVisitList.innerHTML = '';
-    const activeSites = Object.keys(freeVisits).filter(site => freeVisits[site].expiresAt > now);
-    
-    if (activeSites.length === 0) {
-      freeVisitList.innerHTML = '<li style="padding: 0.75rem; color: var(--text-dim); text-align: center;">No active free visits</li>';
-      return;
-    }
-    
-    activeSites.forEach(site => {
-      const li = document.createElement('li');
-      li.className = 'site-item';
-      
-      const updateTime = () => {
-        const remainingMs = freeVisits[site].expiresAt - Date.now();
-        if (remainingMs <= 0) {
-          delete freeVisits[site];
-          chrome.storage.sync.set({ freeVisits });
-          li.remove();
-          if (document.getElementById('freeVisitList').children.length === 0) {
-            loadFreeVisits();
-          }
-          return;
-        }
-        const minutes = Math.floor(remainingMs / 60000);
-        const seconds = Math.floor((remainingMs % 60000) / 1000);
-        infoSpan.textContent = `${site} - ${minutes}m ${seconds}s remaining`;
-      };
-      
-      const infoSpan = document.createElement('span');
-      updateTime();
-      li.appendChild(infoSpan);
-      
-      const removeBtn = document.createElement('button');
-      removeBtn.textContent = 'End Visit';
-      removeBtn.onclick = () => {
-        delete freeVisits[site];
-        chrome.storage.sync.set({ freeVisits });
-        loadFreeVisits();
-      };
-      li.appendChild(removeBtn);
-      
-      freeVisitList.appendChild(li);
-      
-      // Update every second
-      setInterval(updateTime, 1000);
-    });
   });
 }
 
@@ -204,16 +130,16 @@ document.getElementById('newSite').addEventListener('keypress', function(e) {
 document.getElementById('waitSeconds').addEventListener('change', saveTimerSetting);
 document.getElementById('waitSeconds').addEventListener('blur', saveTimerSetting);
 
-document.getElementById('grantFreeVisit').addEventListener('click', grantFreeVisit);
+document.getElementById('grantFreeVisit').addEventListener('click', grantGlobalFreeVisit);
 document.getElementById('freeVisitDuration').addEventListener('keypress', function(e) {
-  if (e.key === 'Enter') grantFreeVisit();
+  if (e.key === 'Enter') grantGlobalFreeVisit();
 });
 
 // Load settings on page load
 document.addEventListener('DOMContentLoaded', function() {
   loadSites();
   loadTimerSetting();
-  loadFreeVisits();
-  // Refresh free visits every second
-  setInterval(loadFreeVisits, 1000);
+  loadGlobalFreeVisitStatus();
+  // Refresh free visit status every second
+  setInterval(loadGlobalFreeVisitStatus, 1000);
 });

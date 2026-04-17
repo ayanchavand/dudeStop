@@ -111,67 +111,6 @@ button {
   transition: background 0.2s, border-color 0.2s;
   letter-spacing: 0.01em;
 }
-
-button:hover {
-  background: rgba(200,169,126,0.2);
-  border-color: rgba(200,169,126,0.5);
-}
-
-.site-list {
-  list-style: none;
-}
-
-.site-item {
-  background: rgba(255,255,255,0.02);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 0.75rem 1rem;
-  margin-bottom: 0.75rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.site-item button {
-  padding: 0.5rem 1rem;
-  font-size: 0.8rem;
-}
-
-.input-group {
-  display: flex;
-  gap: 0.75rem;
-  align-items: stretch;
-}
-
-.input-group input {
-  flex: 1;
-}
-
-.input-group button {
-  white-space: nowrap;
-}
-
-.success-message {
-  color: var(--accent);
-  font-size: 0.85rem;
-  margin-top: 0.5rem;
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-
-.success-message.show {
-  opacity: 1;
-}
-
-input[type="radio"] {
-  cursor: pointer;
-  accent-color: var(--accent);
-}
-
-label[for*="timerMode"],
-label:has(input[type="radio"]) {
-  cursor: pointer;
-}
 </style>
 </head>
 <body>
@@ -179,26 +118,6 @@ label:has(input[type="radio"]) {
 <div class="container">
   <h1>Mindful Moment Settings</h1>
   <p class="subtitle">Configure your mindfulness experience</p>
-
-  <div class="settings-section">
-    <h2>Timer Mode</h2>
-    <div class="form-group">
-      <label>Choose your timer mode:</label>
-      <div style="display: flex; gap: 1.5rem; margin-top: 0.75rem;">
-        <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: normal;">
-          <input type="radio" name="timerMode" value="per-site" id="timerModePerSite">
-          <span>Per-Site Timer</span>
-        </label>
-        <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: normal;">
-          <input type="radio" name="timerMode" value="global" id="timerModeGlobal">
-          <span>Global Timer</span>
-        </label>
-      </div>
-      <small style="display: block; margin-top: 0.75rem;"><strong>Per-Site:</strong> Each monitored site has its own timer and free visits.</small>
-      <small><strong>Global:</strong> One shared timer for all monitored sites. Free visits are disabled.</small>
-      <div class="success-message" id="timerModeSuccessMsg">✓ Timer mode saved</div>
-    </div>
-  </div>
 
   <div class="settings-section">
     <h2>Timer Duration</h2>
@@ -224,28 +143,19 @@ label:has(input[type="radio"]) {
   </div>
 
   <div class="settings-section" id="freeVisitSection">
-    <h2>Get Your Free Visit</h2>
+    <h2>Global Free Visit</h2>
     <div class="form-group">
-      <label for="freeVisitSite">Website:</label>
-      <select id="freeVisitSite" style="width: 100%; padding: 0.75rem 1rem; background: rgba(255,255,255,0.03); border: 1px solid var(--accent-border); border-radius: 8px; color: var(--text-primary); font-size: 0.95rem;">
-        <option value="">Select a monitored website...</option>
-      </select>
-      <small>Choose from your monitored websites</small>
-    </div>
-    <div class="form-group">
-      <label for="freeVisitDuration">Max time to spend (minutes):</label>
+      <label for="freeVisitDuration">Duration (minutes):</label>
       <input type="number" id="freeVisitDuration" min="1" max="180" value="30">
-      <small>After this time expires, normal blocking will resume. (1-180 minutes)</small>
+      <small>Grant yourself a free 30-minute window to access any monitored site. (1-180 minutes)</small>
     </div>
     <div class="form-group">
       <button id="grantFreeVisit">Grant Free Visit</button>
       <div class="success-message" id="freeVisitSuccessMsg">✓ Free visit granted</div>
     </div>
     
-    <h3 style="font-size: 0.95rem; color: var(--text-muted); margin-top: 1.5rem; margin-bottom: 1rem;">Active Free Visits:</h3>
-    <ul class="site-list" id="freeVisitList">
-      <li style="padding: 0.75rem; color: var(--text-dim); text-align: center;">No active free visits</li>
-    </ul>
+    <h3 style="font-size: 0.95rem; color: var(--text-muted); margin-top: 1.5rem; margin-bottom: 1rem;">Free Visit Status:</h3>
+    <div id="freeVisitStatus" style="padding: 0.75rem; color: var(--text-dim); text-align: center;">No active free visit</div>
   </div>
 </div>
 
