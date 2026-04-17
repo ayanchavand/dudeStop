@@ -1,8 +1,4 @@
-const BYPASS_PARAM = "mindful_bypass";
-const BYPASS_DURATION_MS = 5 * 60 * 1000;
-
-let bypassUntil = 0;
-
+const allowedNextNavigation = new Set();
 let monitoredSites = ['youtube.com'];
 
 // ✅ Updated structure
@@ -168,18 +164,9 @@ function handleMonitoredNavigation(tabId, urlStr) {
   if (!isMonitoredUrl(urlStr)) return;
   if (isExtensionPage(urlStr)) return;
 
-  // Bypass param
-  if (url.searchParams.has(BYPASS_PARAM)) {
-    bypassUntil = Date.now() + BYPASS_DURATION_MS;
-    url.searchParams.delete(BYPASS_PARAM);
 
-    processingTabs.add(tabId);
-    chrome.tabs.update(tabId, { url: url.toString() });
-    processingTabs.delete(tabId);
-    return;
-  }
 
-  const path = url.pathname;
+  const path = url.pathname; 
   const allowedPaths = ["/api/", "/youtubei/", "/generate_204"];
   if (allowedPaths.some(p => path.startsWith(p))) return;
 
@@ -217,11 +204,18 @@ function handleMonitoredNavigation(tabId, urlStr) {
     return;
   }
 
-  // Bypass window
-  if (Date.now() < bypassUntil) {
-    processingTabs.delete(tabId);
-    return;
+// Allow ONE navigation after user clicks "I still want to go"
+if (allowedNextNavigation.has(tabId)) {
+  allowedNextNavigation.delete(tabId);
+  processingTabs.delete(tabId);
+  return;
+}
+
+chrome.runtime.onMessage.addListener((msg, sender) => {
+  if (msg.type === "ALLOW_NEXT" && sender.tab) {
+    allowedNextNavigation.add(sender.tab.id);
   }
+});
 
   // Show interstitial
   const interstitialUrl =

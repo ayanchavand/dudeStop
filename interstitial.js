@@ -180,8 +180,9 @@ btnYT.addEventListener('click', () => {
     // Timer already finished, proceed to destination
     const dest = params.get('dest') || `https://www.${site.toLowerCase()}.com`;
     const destUrl = new URL(dest);
-    destUrl.searchParams.set('mindful_bypass', '1');
-    window.location.href = destUrl.toString();
+chrome.runtime.sendMessage({ type: "ALLOW_NEXT" }, () => {
+  window.location.href = dest;
+});
   } else if (!countdownStarted) {
     // Start the countdown timer
     countdownStarted = true;
