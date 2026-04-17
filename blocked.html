@@ -117,6 +117,11 @@
     margin-right: auto;
   }
 
+  .subtext strong {
+    color: var(--accent);
+    font-weight: 500;
+  }
+
   .rules {
     background: var(--surface);
     border: 1px solid rgba(255,255,255,0.06);
@@ -209,20 +214,24 @@
 
   <p class="eyebrow fade-in delay-1">hold on</p>
 
-  <h1 class="headline fade-in delay-1">
+  <h1 class="headline fade-in delay-1" id="headline">
     This site is currently blocked.
   </h1>
 
-  <p class="subtext fade-in delay-2">
+  <p class="subtext fade-in delay-2" id="subtext">
     You already have another monitored site open. You can only access one at a time.
     Close what you're working with first, or focus on what you've already started.
   </p>
 
   <div class="rules fade-in delay-3">
     <p class="rules-title">your rules (you set these)</p>
-    <div class="rule">
+  <div class="rule">
       <span class="rule-dot"></span>
       <span>One monitored site at a time. The second one is always avoidance.</span>
+    </div>
+    <div class="rule">
+      <span class="rule-dot"></span>
+      <span>Free visits don't bypass this rule—they just give you 30 minutes on one site.</span>
     </div>
     <div class="rule">
       <span class="rule-dot"></span>
@@ -241,6 +250,7 @@
 </div>
 
 <script>
+  // Generate starfield
   const starsEl = document.getElementById('stars');
   for (let i = 0; i < 60; i++) {
     const s = document.createElement('div');
@@ -255,6 +265,25 @@
       --max-opacity:${0.1+Math.random()*0.3};
     `;
     starsEl.appendChild(s);
+  }
+
+  // Get URL parameters and update messaging
+  const params = new URLSearchParams(window.location.search);
+  const activeSite = params.get('activeSite');
+  const attemptedSite = params.get('attemptedSite');
+  const reason = params.get('reason');
+
+  const headline = document.getElementById('headline');
+  const subtext = document.getElementById('subtext');
+
+  if (reason === 'different_site' && activeSite && attemptedSite) {
+    // User tried to access a different monitored site
+    headline.textContent = `${attemptedSite} is blocked right now.`;
+    subtext.innerHTML = `You're currently focused on <strong>${activeSite}</strong>. You can only access one monitored site at a time to maintain focus.<br><br>To switch sites, close all tabs of ${activeSite} first, then you'll be able to access ${attemptedSite}.`;
+  } else if (reason === 'already_open' && activeSite) {
+    // User tried to open another tab of the same site
+    headline.textContent = `Keep focus—one tab at a time.`;
+    subtext.innerHTML = `You already have ${activeSite} open in another tab. Opening multiple tabs of the same site defeats the purpose of mindful browsing.<br><br>Work with what you have open, then close it completely when you're done.`;
   }
 </script>
 </body>

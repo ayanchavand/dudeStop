@@ -135,11 +135,6 @@ function handleMonitoredNavigation(tabId, urlStr) {
   // Skip if already an extension page
   if (isExtensionPage(urlStr)) return;
 
-  // Check for free visit — if active, allow access
-  if (hasFreeVisit(site)) {
-    return;
-  }
-
   // Handle bypass token — set timer and strip param
   if (url.searchParams.has(BYPASS_PARAM)) {
     bypassUntil = Date.now() + BYPASS_DURATION_MS;
@@ -150,11 +145,6 @@ function handleMonitoredNavigation(tabId, urlStr) {
     return;
   }
 
-  // Within bypass window — let through
-  if (Date.now() < bypassUntil) {
-    return;
-  }
-
   const path = url.pathname;
   const allowedPaths = ["/api/", "/youtubei/", "/generate_204"];
   if (allowedPaths.some((p) => path.startsWith(p))) return;
@@ -162,9 +152,13 @@ function handleMonitoredNavigation(tabId, urlStr) {
   processingTabs.add(tabId);
 
   // ONE-SITE-ACTIVE RULE: Check if a different monitored site is currently active
+  // This applies EVEN if there's a free visit active on a different site
   if (activeMonitoredSite !== null && activeMonitoredSite !== site) {
-    // Different monitored site is active — show generic blocked page
-    const blockedUrl = chrome.runtime.getURL("blocked.html");
+    // Different monitored site is active — show blocked page with active site info
+    const blockedUrl = chrome.runtime.getURL("blocked.html") + 
+      "?activeSite=" + encodeURIComponent(activeMonitoredSite) +
+      "&attemptedSite=" + encodeURIComponent(site) +
+      "&reason=different_site";
     chrome.tabs.update(tabId, { url: blockedUrl });
     processingTabs.delete(tabId);
     return;
@@ -175,21 +169,38 @@ function handleMonitoredNavigation(tabId, urlStr) {
   const otherTabs = [...siteTabs].filter(id => id !== tabId);
 
   if (otherTabs.length >= 1) {
-    // Already have a tab open on this site — show generic blocked page
-    const blockedUrl = chrome.runtime.getURL("blocked.html");
+    // Already have a tab open on this site — show blocked page
+    const blockedUrl = chrome.runtime.getURL("blocked.html") +
+      "?activeSite=" + encodeURIComponent(site) +
+      "&reason=already_open";
     chrome.tabs.update(tabId, { url: blockedUrl });
-  } else {
-    // First tab on this site — show the mindful interstitial
-    const interstitialUrl =
-      chrome.runtime.getURL("interstitial.html") +
-      "?dest=" + encodeURIComponent(urlStr) +
-      "&site=" + encodeURIComponent(site);
-    chrome.tabs.update(tabId, { url: interstitialUrl });
-    
-    // Set this site as the active monitored site
-    activeMonitoredSite = site;
-    chrome.storage.sync.set({ activeMonitoredSite });
+    processingTabs.delete(tabId);
+    return;
   }
+
+  // Check for free visit on this site — if active, allow access without showing interstitial
+  if (hasFreeVisit(site)) {
+    // Free visit is active on this site, allow immediate access
+    processingTabs.delete(tabId);
+    return;
+  }
+
+  // Within bypass window — let through
+  if (Date.now() < bypassUntil) {
+    processingTabs.delete(tabId);
+    return;
+  }
+
+  // First tab on this site — show the mindful interstitial
+  const interstitialUrl =
+    chrome.runtime.getURL("interstitial.html") +
+    "?dest=" + encodeURIComponent(urlStr) +
+    "&site=" + encodeURIComponent(site);
+  chrome.tabs.update(tabId, { url: interstitialUrl });
+  
+  // Set this site as the active monitored site
+  activeMonitoredSite = site;
+  chrome.storage.sync.set({ activeMonitoredSite });
 
   processingTabs.delete(tabId);
 }

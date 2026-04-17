@@ -162,6 +162,16 @@ button:hover {
 .success-message.show {
   opacity: 1;
 }
+
+input[type="radio"] {
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+
+label[for*="timerMode"],
+label:has(input[type="radio"]) {
+  cursor: pointer;
+}
 </style>
 </head>
 <body>
@@ -171,11 +181,31 @@ button:hover {
   <p class="subtitle">Configure your mindfulness experience</p>
 
   <div class="settings-section">
+    <h2>Timer Mode</h2>
+    <div class="form-group">
+      <label>Choose your timer mode:</label>
+      <div style="display: flex; gap: 1.5rem; margin-top: 0.75rem;">
+        <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: normal;">
+          <input type="radio" name="timerMode" value="per-site" id="timerModePerSite">
+          <span>Per-Site Timer</span>
+        </label>
+        <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: normal;">
+          <input type="radio" name="timerMode" value="global" id="timerModeGlobal">
+          <span>Global Timer</span>
+        </label>
+      </div>
+      <small style="display: block; margin-top: 0.75rem;"><strong>Per-Site:</strong> Each monitored site has its own timer and free visits.</small>
+      <small><strong>Global:</strong> One shared timer for all monitored sites. Free visits are disabled.</small>
+      <div class="success-message" id="timerModeSuccessMsg">✓ Timer mode saved</div>
+    </div>
+  </div>
+
+  <div class="settings-section">
     <h2>Timer Duration</h2>
     <div class="form-group">
       <label for="waitSeconds">Wait time before proceeding (seconds)</label>
       <input type="number" id="waitSeconds" min="1" max="300" value="10">
-      <small>The countdown period before you can proceed to the website. (1-300 seconds)</small>
+      <small>The countdown period before you can proceed to any blocked website. (1-300 seconds)</small>
       <div class="success-message" id="timerSuccessMsg">✓ Timer setting saved</div>
     </div>
   </div>
@@ -193,7 +223,7 @@ button:hover {
     <ul class="site-list" id="siteList"></ul>
   </div>
 
-  <div class="settings-section">
+  <div class="settings-section" id="freeVisitSection">
     <h2>Get Your Free Visit</h2>
     <div class="form-group">
       <label for="freeVisitSite">Website:</label>
