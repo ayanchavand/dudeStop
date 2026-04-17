@@ -2,38 +2,51 @@ const BYPASS_PARAM = "mindful_bypass";
 const BYPASS_DURATION_MS = 5 * 60 * 1000;
 
 let bypassUntil = 0;
-let monitoredSites = ['youtube.com']; // Default, will be loaded from storage
-let globalFreeVisit = { active: false, expiresAt: 0 }; // Global free visit tracking
-let activeMonitoredSite = null; // Track which monitored site is currently active
 
-// Track tabs that are actively on monitored sites: Map<site, Set<tabId>>
+let monitoredSites = ['youtube.com'];
+
+// ✅ Updated structure
+let globalFreeVisit = {
+  active: false,
+  expiresAt: 0,
+  lastUsedAt: 0 // 👈 NEW: tracks last usage
+};
+
+let activeMonitoredSite = null;
+
+// Track tabs that are actively on monitored sites
 const monitoredTabs = new Map();
-// Track tabs we're currently processing to avoid double-redirects
 const processingTabs = new Set();
 
-// Load monitored sites from storage
-chrome.storage.sync.get(['monitoredSites'], function(result) {
+// Load from storage
+chrome.storage.sync.get(['monitoredSites'], (result) => {
   monitoredSites = result.monitoredSites || ['youtube.com'];
 });
 
-// Load global free visit from storage
-chrome.storage.sync.get(['globalFreeVisit'], function(result) {
-  globalFreeVisit = result.globalFreeVisit || { active: false, expiresAt: 0 };
+chrome.storage.sync.get(['globalFreeVisit'], (result) => {
+  globalFreeVisit = result.globalFreeVisit || {
+    active: false,
+    expiresAt: 0,
+    lastUsedAt: 0
+  };
 });
 
-// Load active monitored site from storage
-chrome.storage.sync.get(['activeMonitoredSite'], function(result) {
+chrome.storage.sync.get(['activeMonitoredSite'], (result) => {
   activeMonitoredSite = result.activeMonitoredSite || null;
 });
 
-// Listen for changes to monitored sites, global free visit, and active site
+// Listen for storage changes
 chrome.storage.onChanged.addListener((changes, areaName) => {
   if (areaName === 'sync') {
     if (changes.monitoredSites) {
       monitoredSites = changes.monitoredSites.newValue || ['youtube.com'];
     }
     if (changes.globalFreeVisit) {
-      globalFreeVisit = changes.globalFreeVisit.newValue || { active: false, expiresAt: 0 };
+      globalFreeVisit = changes.globalFreeVisit.newValue || {
+        active: false,
+        expiresAt: 0,
+        lastUsedAt: 0
+      };
     }
     if (changes.activeMonitoredSite) {
       activeMonitoredSite = changes.activeMonitoredSite.newValue || null;
@@ -41,10 +54,10 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
   }
 });
 
+// Helpers
 function getSite(urlStr) {
   try {
-    const u = new URL(urlStr);
-    return u.hostname;
+    return new URL(urlStr).hostname;
   } catch {
     return null;
   }
@@ -53,48 +66,72 @@ function getSite(urlStr) {
 function isMonitoredUrl(urlStr) {
   const site = getSite(urlStr);
   if (!site) return false;
-  return monitoredSites.some(monitored => site === monitored || site.endsWith('.' + monitored));
+  return monitoredSites.some(m => site === m || site.endsWith('.' + m));
 }
 
 function isExtensionPage(urlStr) {
   return urlStr && urlStr.startsWith(chrome.runtime.getURL(""));
 }
 
-// Check if global free visit is active
+// ✅ NEW: 24h rule check
+function canStartFreeVisit() {
+  const now = Date.now();
+  const DAY = 24 * 60 * 60 * 1000;
+
+  return (now - globalFreeVisit.lastUsedAt) > DAY;
+}
+
+// ✅ NEW: start free visit properly
+function startGlobalFreeVisit(durationMs) {
+  const now = Date.now();
+
+  if (!canStartFreeVisit()) return false;
+
+  globalFreeVisit.active = true;
+  globalFreeVisit.expiresAt = now + durationMs;
+  globalFreeVisit.lastUsedAt = now;
+
+  chrome.storage.sync.set({ globalFreeVisit });
+  return true;
+}
+
 function hasGlobalFreeVisit() {
   if (globalFreeVisit.active) {
     const now = Date.now();
+
     if (globalFreeVisit.expiresAt > now) {
       return true;
     } else {
-      // Free visit has expired, mark as inactive
+      const DAY = 24 * 60 * 60 * 1000;
+
+      // 🔥 THIS is what was missing
       globalFreeVisit.active = false;
       globalFreeVisit.expiresAt = 0;
+      globalFreeVisit.cooldownUntil = now + DAY;
+
       chrome.storage.sync.set({ globalFreeVisit });
     }
   }
   return false;
 }
 
-// Keep monitoredTabs in sync as tabs navigate away or close
+// Tabs tracking
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  // Only process once the URL is available
   if (changeInfo.url !== undefined) {
     const site = getSite(changeInfo.url);
+
     if (isMonitoredUrl(changeInfo.url) && !isExtensionPage(changeInfo.url)) {
       if (!monitoredTabs.has(site)) {
         monitoredTabs.set(site, new Set());
       }
       monitoredTabs.get(site).add(tabId);
     } else if (!isExtensionPage(changeInfo.url)) {
-      // Remove from all sites
       for (const tabs of monitoredTabs.values()) {
         tabs.delete(tabId);
       }
     }
   }
 
-  // Handle redirect for main_frame loads
   if (changeInfo.status === "loading" && tab.url) {
     handleMonitoredNavigation(tabId, tab.url);
   }
@@ -102,14 +139,14 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 
 chrome.tabs.onRemoved.addListener((tabId) => {
   let removedSite = null;
+
   for (const [site, tabs] of monitoredTabs.entries()) {
     if (tabs.has(tabId)) {
       removedSite = site;
       tabs.delete(tabId);
     }
   }
-  
-  // If we removed a tab from the active site and no other tabs of that site exist, reset activeMonitoredSite
+
   if (removedSite && activeMonitoredSite === removedSite) {
     const activeTabs = monitoredTabs.get(removedSite);
     if (!activeTabs || activeTabs.size === 0) {
@@ -117,29 +154,25 @@ chrome.tabs.onRemoved.addListener((tabId) => {
       chrome.storage.sync.set({ activeMonitoredSite });
     }
   }
-  
+
   processingTabs.delete(tabId);
 });
 
+// Core logic
 function handleMonitoredNavigation(tabId, urlStr) {
-  // Avoid double-processing the same tab
-  if (processingTabs.has(tabId)) {
-    return;
-  }
+  if (processingTabs.has(tabId)) return;
 
   const url = new URL(urlStr);
   const site = getSite(urlStr);
 
-  // Skip if not monitored
   if (!isMonitoredUrl(urlStr)) return;
-
-  // Skip if already an extension page
   if (isExtensionPage(urlStr)) return;
 
-  // Handle bypass token — set timer and strip param
+  // Bypass param
   if (url.searchParams.has(BYPASS_PARAM)) {
     bypassUntil = Date.now() + BYPASS_DURATION_MS;
     url.searchParams.delete(BYPASS_PARAM);
+
     processingTabs.add(tabId);
     chrome.tabs.update(tabId, { url: url.toString() });
     processingTabs.delete(tabId);
@@ -148,58 +181,56 @@ function handleMonitoredNavigation(tabId, urlStr) {
 
   const path = url.pathname;
   const allowedPaths = ["/api/", "/youtubei/", "/generate_204"];
-  if (allowedPaths.some((p) => path.startsWith(p))) return;
+  if (allowedPaths.some(p => path.startsWith(p))) return;
 
   processingTabs.add(tabId);
 
-  // ONE-SITE-ACTIVE RULE: Check if a different monitored site is currently active
-  // This applies EVEN if there's a free visit active on a different site
+  // One-site rule
   if (activeMonitoredSite !== null && activeMonitoredSite !== site) {
-    // Different monitored site is active — show blocked page with active site info
-    const blockedUrl = chrome.runtime.getURL("blocked.html") + 
+    const blockedUrl = chrome.runtime.getURL("blocked.html") +
       "?activeSite=" + encodeURIComponent(activeMonitoredSite) +
       "&attemptedSite=" + encodeURIComponent(site) +
       "&reason=different_site";
+
     chrome.tabs.update(tabId, { url: blockedUrl });
     processingTabs.delete(tabId);
     return;
   }
 
-  // Check how many other tabs are already on this site (excluding this tab)
+  // Prevent multiple tabs
   const siteTabs = monitoredTabs.get(site) || new Set();
   const otherTabs = [...siteTabs].filter(id => id !== tabId);
 
   if (otherTabs.length >= 1) {
-    // Already have a tab open on this site — show blocked page
     const blockedUrl = chrome.runtime.getURL("blocked.html") +
       "?activeSite=" + encodeURIComponent(site) +
       "&reason=already_open";
+
     chrome.tabs.update(tabId, { url: blockedUrl });
     processingTabs.delete(tabId);
     return;
   }
 
-  // Check for global free visit — if active, allow access without showing interstitial
+  // ✅ Global free visit check
   if (hasGlobalFreeVisit()) {
-    // Global free visit is active, allow immediate access
     processingTabs.delete(tabId);
     return;
   }
 
-  // Within bypass window — let through
+  // Bypass window
   if (Date.now() < bypassUntil) {
     processingTabs.delete(tabId);
     return;
   }
 
-  // First tab on this site — show the mindful interstitial
+  // Show interstitial
   const interstitialUrl =
     chrome.runtime.getURL("interstitial.html") +
     "?dest=" + encodeURIComponent(urlStr) +
     "&site=" + encodeURIComponent(site);
+
   chrome.tabs.update(tabId, { url: interstitialUrl });
-  
-  // Set this site as the active monitored site
+
   activeMonitoredSite = site;
   chrome.storage.sync.set({ activeMonitoredSite });
 

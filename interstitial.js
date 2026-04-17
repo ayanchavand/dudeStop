@@ -193,24 +193,90 @@ btnYT.addEventListener('click', () => {
 // ── Free visit button ──────────────────────────────────────────────
 
 const btnFreeVisit = document.getElementById('btn-free-visit');
+
+function formatTime(ms) {
+  const totalSec = Math.ceil(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+}
+
+function updateFreeVisitButton() {
+  chrome.storage.sync.get(['globalFreeVisit'], (result) => {
+    const data = result.globalFreeVisit || {
+      active: false,
+      expiresAt: 0,
+      cooldownUntil: 0
+    };
+
+    const now = Date.now();
+
+    // If currently active
+    if (data.active && data.expiresAt > now) {
+      btnFreeVisit.textContent = "☀️ Free visit active";
+      btnFreeVisit.disabled = true;
+      btnFreeVisit.style.opacity = '0.5';
+      return;
+    }
+
+    // If cooldown is active
+    if (data.cooldownUntil && data.cooldownUntil > now) {
+      const remaining = data.cooldownUntil - now;
+
+      btnFreeVisit.textContent = `⏳ Available in ${formatTime(remaining)}`;
+      btnFreeVisit.disabled = true;
+      btnFreeVisit.style.opacity = '0.5';
+      return;
+    }
+
+    // Otherwise available
+    btnFreeVisit.textContent = "☀️ Get 30 min free visit";
+    btnFreeVisit.disabled = false;
+    btnFreeVisit.style.opacity = '1';
+  });
+}
+
+// Run on load
+updateFreeVisitButton();
+
+// Click handler
 btnFreeVisit.addEventListener('click', () => {
-  // Grant 30 minute global free visit
-  const durationMinutes = 30;
-  const expiresAt = Date.now() + (durationMinutes * 60 * 1000);
-  const globalFreeVisit = { active: true, expiresAt };
-  
-  chrome.storage.sync.set({ globalFreeVisit }, function() {
-    // Show success message
-    const originalText = btnFreeVisit.textContent;
-    btnFreeVisit.textContent = '✓ Free visit granted!';
-    btnFreeVisit.disabled = true;
-    btnFreeVisit.style.opacity = '0.5';
-    
-    // Redirect after a short delay
-    setTimeout(() => {
-      const dest = params.get('dest') || `https://www.${site.toLowerCase()}.com`;
-      window.location.href = dest;
-    }, 1000);
+  chrome.storage.sync.get(['globalFreeVisit'], (result) => {
+    const data = result.globalFreeVisit || {
+      active: false,
+      expiresAt: 0,
+      cooldownUntil: 0
+    };
+
+    const now = Date.now();
+
+    // Prevent if still in cooldown
+    if (data.cooldownUntil && data.cooldownUntil > now) {
+      updateFreeVisitButton();
+      return;
+    }
+
+    // Start free visit
+    const duration = 30 * 60 * 1000;
+
+    const newData = {
+      active: true,
+      expiresAt: now + duration,
+      cooldownUntil: data.cooldownUntil || 0
+    };
+
+    chrome.storage.sync.set({ globalFreeVisit: newData }, () => {
+      btnFreeVisit.textContent = '✓ Free visit granted!';
+      btnFreeVisit.disabled = true;
+      btnFreeVisit.style.opacity = '0.5';
+
+      setTimeout(() => {
+        const dest = params.get('dest') || `https://www.${site.toLowerCase()}.com`;
+        window.location.href = dest;
+      }, 1000);
+    });
   });
 });
 
