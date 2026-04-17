@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Too much YouTube</title>
+<title>Site Blocked</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -117,39 +117,6 @@
     margin-right: auto;
   }
 
-  .stat-row {
-    display: flex;
-    justify-content: center;
-    gap: 1px;
-    margin-bottom: 2.5rem;
-  }
-
-  .stat {
-    background: var(--surface);
-    border: 1px solid rgba(255,255,255,0.06);
-    padding: 1rem 1.5rem;
-    flex: 1;
-    max-width: 140px;
-  }
-
-  .stat:first-child { border-radius: 10px 0 0 10px; }
-  .stat:last-child  { border-radius: 0 10px 10px 0; }
-
-  .stat-num {
-    font-size: 1.8rem;
-    font-weight: 300;
-    color: var(--danger);
-    line-height: 1;
-    margin-bottom: 0.3rem;
-  }
-
-  .stat-label {
-    font-size: 0.72rem;
-    color: var(--text-dim);
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-  }
-
   .rules {
     background: var(--surface);
     border: 1px solid rgba(255,255,255,0.06);
@@ -243,42 +210,27 @@
   <p class="eyebrow fade-in delay-1">hold on</p>
 
   <h1 class="headline fade-in delay-1">
-    You already have YouTube open.
+    This site is currently blocked.
   </h1>
 
   <p class="subtext fade-in delay-2">
-    Opening another tab won't make the first one more meaningful.
-    Close what you have, finish what you started, or do something else entirely.
+    You already have another monitored site open. You can only access one at a time.
+    Close what you're working with first, or focus on what you've already started.
   </p>
-
-  <div class="stat-row fade-in delay-2">
-    <div class="stat">
-      <div class="stat-num" id="open-count">1</div>
-      <div class="stat-label">tab open</div>
-    </div>
-    <div class="stat">
-      <div class="stat-num">0</div>
-      <div class="stat-label">tabs needed</div>
-    </div>
-    <div class="stat">
-      <div class="stat-num">∞</div>
-      <div class="stat-label">other options</div>
-    </div>
-  </div>
 
   <div class="rules fade-in delay-3">
     <p class="rules-title">your rules (you set these)</p>
     <div class="rule">
       <span class="rule-dot"></span>
-      <span>One YouTube tab at a time. The second one is always avoidance.</span>
+      <span>One monitored site at a time. The second one is always avoidance.</span>
     </div>
     <div class="rule">
       <span class="rule-dot"></span>
-      <span>If you're bored of the first tab, close it — don't open a new one.</span>
+      <span>If you're done with the first site, close it completely before opening another.</span>
     </div>
     <div class="rule">
       <span class="rule-dot"></span>
-      <span>Autoplay is not a reason. You chose to be here.</span>
+      <span>Switching sites is not focus—it's distraction. You chose to be mindful.</span>
     </div>
   </div>
 
@@ -289,14 +241,6 @@
 </div>
 
 <script>
-  const params = new URLSearchParams(window.location.search);
-  const count = parseInt(params.get('count')) || 1;
-  const site = params.get('site') || 'YouTube';
-  document.getElementById('open-count').textContent = count;
-  document.title = `Too much ${site}`;
-  document.querySelector('.headline').textContent = `You already have ${site} open.`;
-  document.querySelector('.rule span').textContent = `One ${site} tab at a time. The second one is always avoidance.`;
-
   const starsEl = document.getElementById('stars');
   for (let i = 0; i < 60; i++) {
     const s = document.createElement('div');
